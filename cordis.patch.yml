@@ -1,0 +1,7 @@
+# dsh-helloai-works bundle patch
+#
+# 由 `dsh plugin --profile <name> add <路径>` 自动挂载（Loader bundle 层）；
+# 手动挂载时也可在 profiles/<name>/cordis.patch.yml 里自行添加同样的 insert 条目。
+- insert:
+    - id: helloai-works
+      name: '@hello-heyongping/dsh-helloai-works'
