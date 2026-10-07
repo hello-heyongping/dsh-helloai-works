@@ -591,11 +591,15 @@ const shoot = (page, shot, size) => {
  * 实际可用宽度，把内容高度算出来写回内联（CSS 自己写死 height:0px 的内联样式，
  * 只有内联能盖过它；Chrome 的 --dump-dom 不返回排版，也不跑页面脚本，量不了）。
  */
-const FIT = { cjk: 1, wide: 0.6, narrow: 0.52, space: 0.3, lineHeight: 1.65, padding: 10, minHeight: 30 };
-/** 卡片那一栏里，文字块真正能用的宽度（列宽 − 两侧内边距 − 序号槽 − 装订线）。 */
-const BLOCK_BODY_WIDTH = CARD_WIDTH - 24 - 18 - 6 - 8;
-/** 标题框：整栏宽度减卡片头部的内边距。 */
-const TITLE_WIDTH = CARD_WIDTH - 24;
+const FIT = { cjk: 1, wide: 0.6, narrow: 0.55, space: 0.3, lineHeight: 1.65, padding: 10, minHeight: 30 };
+/**
+ * 折行的「有效宽度」比实际排版宽度窄一档：标点、英文单词、避头尾都会让一行装不下
+ * 按字宽算出来的那么多字。宁可多留一行空白（textarea 空着几行什么也看不出来），
+ * 也不能少算——少一行，输入框就会把内容滚到底、把末行推出可视区。这两个值对着
+ * 真 Chrome 量过：正文框 320px ≈ 20 个汉字宽，标题框 414px ≈ 26 个。
+ */
+const BLOCK_FOLD_WIDTH = 284;
+const TITLE_FOLD_WIDTH = 372;
 
 /** 一个字的相对宽度：汉字全角，拉丁/数字大约半个多。 */
 function charWidth(code) {
@@ -636,10 +640,10 @@ function fitTextareas(html) {
   const blocks = html.match(/<textarea class="hxw-text-block"[^>]*>[\s\S]*?<\/textarea>/g) ?? [];
   if (blocks.length < 1) throw new Error("卡片里没有文字块，没法校正高度");
 
-  let out = html.replace(titleTag, titleTag.replace(/(style=")([^"]*)(")/, (_all, before, css, after) => `${before}${css}height:${fitHeight(titleTag.replace(/^[\s\S]*?>/, "").replace(/<\/textarea>$/, ""), TITLE_WIDTH, 15.5) + 1}px${after}`));
+  let out = html.replace(titleTag, titleTag.replace(/(style=")([^"]*)(")/, (_all, before, css, after) => `${before}${css}height:${fitHeight(titleTag.replace(/^[\s\S]*?>/, "").replace(/<\/textarea>$/, ""), TITLE_FOLD_WIDTH, 15.5) + 1}px${after}`));
   for (const tag of blocks) {
     const text = tag.replace(/^[\s\S]*?>/, "").replace(/<\/textarea>$/, "");
-    const height = fitHeight(text, BLOCK_BODY_WIDTH, 13.5) + 1;
+    const height = fitHeight(text, BLOCK_FOLD_WIDTH, 13.5) + 1;
     out = out.replace(tag, tag.replace(/(style=")([^"]*)(")/, (_all, before, css, after) => `${before}${css}height:${height}px${after}`));
   }
   const done = [...out.matchAll(/<textarea class="hxw-(?:cv-title|text-block)"[^>]*style="[^"]*height:(\d+)px/g)];
